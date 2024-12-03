@@ -11,16 +11,24 @@ from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_core.documents import Document
 import networkx as nx
 import json
-import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
-from docx import Document as DocxDocument  # Importar para leer archivos .docx
+from docx import Document as DocxDocument 
+from rapidfuzz import fuzz, process
+
+############
+## OPENAI ##
+############
 
 # Load environment variables from a .env file
 load_dotenv()
 
 # Set the OpenAI API key from the .env file
 api_key = os.getenv("OPENAI_API_KEY")
+
+##############
+## ARCHIVOS ##
+##############
 
 # Función para leer todos los archivos .txt, .pdf y .docx de la carpeta "archivos"
 def read_files_from_folder(folder_path):
@@ -44,6 +52,57 @@ def read_files_from_folder(folder_path):
 folder_path = "archivos"
 lines = read_files_from_folder(folder_path)
 
+###################
+## NORMALIZACIÓN ##
+###################
+
+# Diccionario de equivalencias para normalización
+
+NAME_EQUIVALENCES = {
+    "ancelmo rojas": "anselmo rojas",
+    "anselmo rojas": "anselmo rojas",
+    "don anselmo rojas": "anselmo rojas",
+    "don alsemo rojas": "anselmo rojas",
+    "alsemo rojas": "anselmo rojas",
+    "anselmo": "anselmo rojas",
+    "collas" : "qollas",
+    "mamita del rosario": "virgen del rosario",
+    "festividad de la virgen del rosario": "virgen del rosario",
+    "carmen": "virgen del carmen"
+}
+
+def normalize_name(name):
+    """
+    Normaliza un nombre utilizando un diccionario de equivalencias, eliminando títulos y errores ortográficos.
+    Args:
+        name (str): El nombre a normalizar.
+    Returns:
+        str: El nombre normalizado.
+    """
+    # Convertir a minúsculas y quitar espacios
+    name = name.lower().strip()
+
+    # Eliminar títulos comunes
+    for title in ["don", "mr.", "mrs.", "sr.", "dr."]:
+        name = name.replace(title, "").strip()
+
+    # Si está en el diccionario de equivalencias, usar el valor mapeado
+    if name in NAME_EQUIVALENCES:
+        return NAME_EQUIVALENCES[name]
+
+    # Buscar coincidencias similares usando RapidFuzz
+    known_names = list(NAME_EQUIVALENCES.values())
+    normalized = process.extractOne(name, known_names, scorer=fuzz.ratio)
+    if normalized and normalized[1] >= 80:  # Umbral de similitud
+        return normalized[0]
+
+    # Si no hay coincidencias, devolver el nombre procesado
+    return name
+
+########################
+## DIVISIÓN EN CHUNKS ##
+########################
+
 # Dividir el texto en fragmentos de 1000 caracteres (ajusta este tamaño si es necesario)
 chunk_size = 10000
 text_chunks = [lines[i:i + chunk_size] for i in range(0, len(lines), chunk_size)]
@@ -66,41 +125,20 @@ for i, chunk in enumerate(text_chunks):
     # Agregar nodos y aristas del fragmento al grafo
     for doc in graph_documents:
         for node in doc.nodes:
-            node_id = dict(node)["id"]
-            content = dict(node)["type"]
+            node_id = normalize_name(dict(node)["id"])
+            content =normalize_name( dict(node)["type"])
             nx_graph.add_node(node_id, content=content)
         
         for edge in doc.relationships:
             edge_dict = vars(edge) if not isinstance(edge, dict) else edge
-            source = str(dict(edge_dict["source"])["id"])
-            target = str(dict(edge_dict["target"])["id"])
+            source = normalize_name(str(dict(edge_dict["source"])["id"]))
+            target = normalize_name(str(dict(edge_dict["target"])["id"]))
             tipo = edge_dict["type"]
             nx_graph.add_edge(source, target, content=tipo)
             
 # Guardar el grafo en JSON
 data = nx.node_link_data(nx_graph)
-with open("graph.json", "w") as file:
+with open("grafo/graph.json", "w") as file:
     json.dump(data, file)
-    
-# Procesar el componente más grande del grafo
-Gcc = sorted(nx.connected_components(nx_graph), key=len, reverse=True)
-nx_graph = nx_graph.subgraph(Gcc[0])
 
-# Layout del grafo
-pos = nx.kamada_kawai_layout(nx_graph)
 
-# Figura
-plt.figure(figsize=(10, 10))
-
-# Dibujar aristas
-nx.draw_networkx_edges(nx_graph, pos, edge_color="k", width=0.75)
-
-# Dibujar nodos
-nx.draw_networkx_nodes(nx_graph, pos, node_size=500, node_color="gold")
-
-# Dibujar etiquetas
-nx.draw_networkx_labels(nx_graph, pos, font_size=7, font_weight="bold")
-
-# Guardar la imagen
-plt.savefig("graph.png", format="PNG")
-plt.show()
