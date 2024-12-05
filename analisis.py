@@ -9,6 +9,8 @@ import json
 import networkx as nx
 from networkx.readwrite import json_graph
 import matplotlib.pyplot as plt
+from collections import Counter
+import pandas as pd
 
 # Cargar el archivo JSON
 with open("grafo/graph.json", "r") as file:
@@ -18,8 +20,8 @@ with open("grafo/graph.json", "r") as file:
 nx_graph = json_graph.node_link_graph(graph_data)
     
 # Procesar el componente más grande del grafo
-Gcc = sorted(nx.connected_components(nx_graph), key=len, reverse=True)
-nx_graph = nx_graph.subgraph(Gcc[0])
+#Gcc = sorted(nx.connected_components(nx_graph), key=len, reverse=True)
+#nx_graph = nx_graph.subgraph(Gcc[0])
 
 # Layout del grafo
 pos = nx.kamada_kawai_layout(nx_graph)
@@ -46,8 +48,23 @@ nx.draw_networkx_edges(nx_graph, pos, edge_color="k", width=0.75)
 nx.draw_networkx_nodes(nx_graph, pos, node_size=node_sizes, node_color="gold")
 
 # Dibujar etiquetas
-nx.draw_networkx_labels(nx_graph, pos, labels = {n: n for n in nx_graph if n in nodes_sorted_by_centrality[:25]}, font_size=7, font_weight="bold")
+nx.draw_networkx_labels(nx_graph, pos, labels = {n: n for n in nx_graph if n in nodes_sorted_by_centrality[:20]}, font_size=7, font_weight="bold")
 
 # Guardar la imagen
 plt.savefig("grafo/graph.png", format="PNG",  dpi=1000)
 plt.show()
+
+# aristas
+aristas = [item[2]['content'] for item in list(nx_graph.edges(data=True))]
+
+# contar
+C = Counter(aristas).most_common()
+
+# relaciones vs número
+R = list(zip(*C))[0]
+N = list(zip(*C))[1]
+
+# pandas
+D = {'tipo de relación':R, 'número':N}
+DF = pd.DataFrame.from_dict(D)
+DF.to_excel("grafo/relaciones.xlsx")  

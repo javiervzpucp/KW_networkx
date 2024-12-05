@@ -26,6 +26,25 @@ load_dotenv()
 # Set the OpenAI API key from the .env file
 api_key = os.getenv("OPENAI_API_KEY")
 
+# model
+llm = ChatOpenAI(temperature=0.2, 
+                 model_name="gpt-4o-mini")
+#,
+#                 model_kwargs={
+#        "messages": [
+#            {"role": "system", "content": """
+#Eres un experto en eventos culturales andinos y patrimonio cultural inmaterial peruano. En particular,
+#estás especializado en la festividad de la Mamacha Carmen en Paucartambo, Cusco, Perú. La Mamacha Carmen también es conocida como Virgen del Carmen.
+#Tu tarea es analizar textos relacionados con esta festividad para extraer tantas entidades clave como sea posible (incluyendo nombres de danzas, lugares, figuras religiosas, participantes, costumbres, objetos ceremoniales y eventos). 
+#Además, identifica subentidades o descompón conceptos complejos en términos más simples, y extrae todas las relaciones relevantes (como 'en honor de', 'asociada con', 'realizada en', 'utilizada en', 'patrona de', 'parte de la tradición de', 'ubicada en', 'representada por').
+
+#Busca todas las conexiones posibles, incluso si no son evidentes a primera vista. Sé exhaustivo al identificar entidades y relaciones, y mantén todo en español, respetando los nombres originales. Si hay términos generales (por ejemplo, 'máscaras' o 'iglesia'), inclúyelos siempre que estén conectados con la festividad.
+#"""}
+#        ]
+#    }
+#)
+llm_transformer = LLMGraphTransformer(llm=llm)
+
 ##############
 ## ARCHIVOS ##
 ##############
@@ -56,6 +75,24 @@ lines = read_files_from_folder(folder_path)
 ## NORMALIZACIÓN ##
 ###################
 
+# Lista de palabras o nombres a ignorar
+IGNORED_WORDS = ["milagros alccacuntor farroñan", "tourism promotion plan","encuesta",
+                 "variables e indicadores","tourism", "visitor", "transportation",
+                 "gastronomy", "formulación de la hipótesis", "hipótesis general", "hipótesis específicas",
+                 "instrumentos de recolección de datos", "recurso turístico",
+                 "actividad turística", "producto turístico", "spain"]
+
+def should_ignore(name):
+    """
+    Verifica si un nombre debe ser ignorado.
+    Args:
+        name (str): El nombre a verificar.
+    Returns:
+        bool: True si debe ignorarse, False en caso contrario.
+    """
+    name = name.lower().strip()  # Normalizar a minúsculas
+    return any(ignored_word in name for ignored_word in IGNORED_WORDS)
+
 # Diccionario de equivalencias para normalización
 
 NAME_EQUIVALENCES = {
@@ -65,9 +102,35 @@ NAME_EQUIVALENCES = {
     "don alsemo rojas": "anselmo rojas",
     "alsemo rojas": "anselmo rojas",
     "anselmo": "anselmo rojas",
-    "collas" : "qollas",
+    "collas" : "qolla",
+    "qollas" : "qolla",
+    "colla" : "qolla",
+    "qollas" : "qolla",
+    "macana" : "inkari makana",
+    "macana" : "inkari makana",
+    "incari macana" : "inkari makana",
+    "danza macanas" : "inkari makana",
+    "danza macana" : "inkari makana",
+    "inka makana" : "inkari makana",
+    "danza chunchada" : "chunchada",
+    "danza chunchadas" : "chunchada",
+    "danza chunchada" : "chunchada",
+    "chicas de la danza chunchada" : "chunchada",
+    "danza amazonas" : "chunchada",
+    "chunchadas" : "chunchada",
+    "danza chunchada paucartambina" : "chunchada",
+    "cargowasis" : "cargo wasi",
+    "cargowasi" : "cargo wasi",
+    "cargo wasi" : "cargo wasi",
     "mamita del rosario": "virgen del rosario",
-    "festividad de la virgen del rosario": "virgen del rosario",
+    "virgen del rosario": "virgen del rosario",
+    "virgen_de_rosario_de_paucartambo": "virgen del rosario",
+    "virgen_del_rosario_de_paucartambo": "virgen del rosario",
+    "virgen_de_rosario_paucartambo": "virgen del rosario",
+    "fiesta_de_la_virgen_del_rosario": "virgen del rosario",
+    "mamita": "virgen del rosario",
+    "merienda" : "merienda paucartambina",
+    "merienda paucartambina" : "merienda paucartambina",
     "carmen": "virgen del carmen"
 }
 
@@ -117,9 +180,6 @@ for i, chunk in enumerate(text_chunks):
     # Crear un documento con el fragmento de texto
     document = Document(page_content=chunk)
   
-    llm = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo")  # Configuración del modelo
-    llm_transformer = LLMGraphTransformer(llm=llm)
-
     graph_documents = llm_transformer.convert_to_graph_documents([document])
     
     # Agregar nodos y aristas del fragmento al grafo
@@ -127,6 +187,11 @@ for i, chunk in enumerate(text_chunks):
         for node in doc.nodes:
             node_id = normalize_name(dict(node)["id"])
             content =normalize_name( dict(node)["type"])
+            
+            # Ignorar nodos que coincidan con palabras específicas
+            if should_ignore(node_id) or should_ignore(content):
+                continue
+            
             nx_graph.add_node(node_id, content=content)
         
         for edge in doc.relationships:
@@ -134,6 +199,11 @@ for i, chunk in enumerate(text_chunks):
             source = normalize_name(str(dict(edge_dict["source"])["id"]))
             target = normalize_name(str(dict(edge_dict["target"])["id"]))
             tipo = edge_dict["type"]
+            
+            # Ignorar relaciones que incluyan palabras específicas
+            if should_ignore(source) or should_ignore(target):
+                continue
+            
             nx_graph.add_edge(source, target, content=tipo)
             
 # Guardar el grafo en JSON
