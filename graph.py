@@ -28,14 +28,14 @@ api_key = os.getenv("OPENAI_API_KEY")
 
 # model
 llm = ChatOpenAI(temperature=0.2, 
-                 model_name="gpt-4o-mini")
+                 model_name="gpt-4o")
 #,
 #                 model_kwargs={
 #        "messages": [
 #            {"role": "system", "content": """
 #Eres un experto en eventos culturales andinos y patrimonio cultural inmaterial peruano. En particular,
 #estás especializado en la festividad de la Mamacha Carmen en Paucartambo, Cusco, Perú. La Mamacha Carmen también es conocida como Virgen del Carmen.
-#Tu tarea es analizar textos relacionados con esta festividad para extraer tantas entidades clave como sea posible (incluyendo nombres de danzas, lugares, figuras religiosas, participantes, costumbres, objetos ceremoniales y eventos). 
+#Tu tarea es analizar textos relacionados con esta festividad para construir un knowledge graph. Para esto, debes extraer tantas entidades clave como sea posible (incluyendo nombres de danzas, lugares, figuras religiosas, participantes, costumbres, objetos ceremoniales y eventos). 
 #Además, identifica subentidades o descompón conceptos complejos en términos más simples, y extrae todas las relaciones relevantes (como 'en honor de', 'asociada con', 'realizada en', 'utilizada en', 'patrona de', 'parte de la tradición de', 'ubicada en', 'representada por').
 
 #Busca todas las conexiones posibles, incluso si no son evidentes a primera vista. Sé exhaustivo al identificar entidades y relaciones, y mantén todo en español, respetando los nombres originales. Si hay términos generales (por ejemplo, 'máscaras' o 'iglesia'), inclúyelos siempre que estén conectados con la festividad.

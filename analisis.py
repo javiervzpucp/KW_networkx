@@ -68,3 +68,18 @@ N = list(zip(*C))[1]
 D = {'tipo de relación':R, 'número':N}
 DF = pd.DataFrame.from_dict(D)
 DF.to_excel("grafo/relaciones.xlsx")  
+
+# nodos
+nodos = [item[1]['content'] for item in list(nx_graph.nodes(data=True)) if 'content' in item[1]]
+
+# contar
+C = Counter(aristas).most_common()
+
+# entidades vs número
+E = list(zip(*C))[0]
+N = list(zip(*C))[1]
+
+# pandas
+D = {'tipo de entidad':E, 'número':N}
+DF = pd.DataFrame.from_dict(D)
+DF.to_excel("grafo/entidades.xlsx")  
