@@ -58,7 +58,7 @@ nx.draw_networkx_labels(nx_graph, pos, labels = {n: n for n in nx_graph if n in 
 
 # Guardar la imagen
 plt.savefig("grafo/graph.png", format="PNG",  dpi=1000)
-#plt.show()
+plt.show()
 
 # aristas
 aristas = [item[2]['content'] for item in list(nx_graph.edges(data=True))]
@@ -98,6 +98,6 @@ N = list(zip(*nodes_centrality_entities))[0]
 E = list(zip(*nodes_centrality_entities))[1]
 
 # pandas
-D = {'tipo de entidad':N, 'número':E}
+D = {'nodo':N, 'entidad':E}
 DF = pd.DataFrame.from_dict(D)
 DF.to_excel("grafo/nodos_entidades_sorted.xlsx")  
