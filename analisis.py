@@ -73,7 +73,7 @@ DF.to_excel("grafo/relaciones.xlsx")
 nodos = [item[1]['content'] for item in list(nx_graph.nodes(data=True)) if 'content' in item[1]]
 
 # contar
-C = Counter(aristas).most_common()
+C = Counter(nodos).most_common()
 
 # entidades vs número
 E = list(zip(*C))[0]
