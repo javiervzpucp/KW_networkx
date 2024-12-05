@@ -11,6 +11,7 @@ from networkx.readwrite import json_graph
 import matplotlib.pyplot as plt
 from collections import Counter
 import pandas as pd
+from networkx.algorithms import bipartite
 
 # Cargar el archivo JSON
 with open("grafo/graph.json", "r") as file:
@@ -18,6 +19,11 @@ with open("grafo/graph.json", "r") as file:
 
 # Convertir el JSON a un grafo de NetworkX
 nx_graph = json_graph.node_link_graph(graph_data)
+
+G = nx.path_graph(4)
+
+# descripción del grafo
+print(len(nx_graph),len(nx_graph.edges),bipartite.spectral_bipartivity(nx_graph),nx.community.modularity(nx_graph,nx.community.louvain_communities(nx_graph, seed=123)))
     
 # Procesar el componente más grande del grafo
 #Gcc = sorted(nx.connected_components(nx_graph), key=len, reverse=True)
