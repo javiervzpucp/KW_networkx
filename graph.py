@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from docx import Document as DocxDocument 
 from rapidfuzz import fuzz, process
+import re
 
 ############
 ## OPENAI ##
@@ -70,6 +71,32 @@ def read_files_from_folder(folder_path):
 # Leer todos los archivos de la carpeta "archivos"
 folder_path = "archivos"
 lines = read_files_from_folder(folder_path)
+
+def tokenize_text(corpus):
+    """Divide el texto en tokens, ignorando puntuación."""
+    tokens = re.findall(r'\b\w+\b', corpus.lower())
+    return tokens
+
+def calculate_text_statistics(corpus):
+    """
+    estadísticas básicas
+    """
+    tokens = tokenize_text(corpus)
+    total_tokens = len(tokens)
+    unique_types = len(set(tokens))
+    type_token_ratio = unique_types / total_tokens if total_tokens > 0 else 0
+
+    return {
+        "Total Tokens": total_tokens,
+        "Unique Types": unique_types,
+        "Type-Token Ratio": type_token_ratio
+    }
+
+text_stats = calculate_text_statistics(lines)
+print("Text Statistics:")
+print(f"  Total Tokens: {text_stats['Total Tokens']}")
+print(f"  Unique Types: {text_stats['Unique Types']}")
+print(f"  Type-Token Ratio: {text_stats['Type-Token Ratio']:.4f}")
 
 ###################
 ## NORMALIZACIÓN ##
@@ -205,7 +232,14 @@ for i, chunk in enumerate(text_chunks):
                 continue
             
             nx_graph.add_edge(source, target, content=tipo)
-            
+
+# descripción 
+print(len(nx_graph))
+print(len(nx_graph.edges()))
+print(nx.number_connected_components(nx_graph))
+G = sorted(nx.connected_components(nx_graph), key=len, reverse=True)
+print(len(nx_graph.subgraph(G[0])))
+        
 # Guardar el grafo en JSON
 data = nx.node_link_data(nx_graph)
 with open("grafo/graph.json", "w") as file:

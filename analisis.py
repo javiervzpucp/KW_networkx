@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from collections import Counter
 import pandas as pd
 from networkx.algorithms import bipartite
+import random
+import numpy as np
 
 # Cargar el archivo JSON
 with open("grafo/graph.json", "r") as file:
@@ -20,14 +22,12 @@ with open("grafo/graph.json", "r") as file:
 # Convertir el JSON a un grafo de NetworkX
 nx_graph = json_graph.node_link_graph(graph_data)
 
-G = nx.path_graph(4)
-
 # descripción del grafo
-print(len(nx_graph),len(nx_graph.edges),bipartite.spectral_bipartivity(nx_graph),nx.community.modularity(nx_graph,nx.community.louvain_communities(nx_graph, seed=123)))
+print(len(nx_graph),len(nx_graph.edges),bipartite.spectral_bipartivity(nx_graph))
     
 # Procesar el componente más grande del grafo
-#Gcc = sorted(nx.connected_components(nx_graph), key=len, reverse=True)
-#nx_graph = nx_graph.subgraph(Gcc[0])
+Gcc = sorted(nx.connected_components(nx_graph), key=len, reverse=True)
+nx_graph = nx_graph.subgraph(Gcc[0])
 
 # Layout del grafo
 pos = nx.kamada_kawai_layout(nx_graph)
@@ -58,7 +58,7 @@ nx.draw_networkx_labels(nx_graph, pos, labels = {n: n for n in nx_graph if n in 
 
 # Guardar la imagen
 plt.savefig("grafo/graph.png", format="PNG",  dpi=1000)
-plt.show()
+#plt.show()
 
 # aristas
 aristas = [item[2]['content'] for item in list(nx_graph.edges(data=True))]
@@ -101,3 +101,46 @@ E = list(zip(*nodes_centrality_entities))[1]
 D = {'nodo':N, 'entidad':E}
 DF = pd.DataFrame.from_dict(D)
 DF.to_excel("grafo/nodos_entidades_sorted.xlsx")  
+
+graph = nx.Graph(nx_graph)
+
+# experimentos con bipartividad
+initial_bipartivity = bipartite.spectral_bipartivity(graph)
+print(f"Spectral bipartivity inicial: {initial_bipartivity:.2f}")
+
+# Configurar el nivel deseado de bipartitividad
+target_bipartivity = 0.99
+
+# Modificar aristas para alcanzar el nivel deseado
+while True:
+    print(len(graph))
+    # Elegir una arista aleatoria
+    edge = random.choice(list(graph.edges()))
+    u, v = edge
+
+    # Eliminar la arista provisionalmente
+    graph.remove_edge(u, v)
+
+    # Verificar si el grafo sigue siendo conexo
+    if nx.is_connected(graph):
+        # Calcular la nueva bipartitividad
+        current_bipartivity = bipartite.spectral_bipartivity(graph)
+        print(f"Spectral bipartivity actual: {current_bipartivity:.2f}")
+
+        # Si alcanzamos el nivel deseado, salimos del bucle
+        if nx.is_bipartite(graph):
+            print(u, v)
+            break
+    else:
+        # Restaurar la arista si el grafo queda desconectado
+        graph.add_edge(u, v)
+
+# Verificar el resultado final
+final_bipartivity = bipartite.spectral_bipartivity(graph)
+print(f"Spectral bipartivity final: {final_bipartivity:.2f}")
+print(nx.is_bipartite(graph),len(graph),len(graph.edges()))
+
+# sets
+bottom_nodes, top_nodes = bipartite.sets(graph)
+print(bottom_nodes, top_nodes)
+print(np.mean([centrality[n] for n in bottom_nodes]),np.mean([centrality[n] for n in top_nodes]))
